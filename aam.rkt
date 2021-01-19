@@ -15,9 +15,22 @@
   (match expr
     [(? symbol? var) (env/lookup env var)]
     [(? number? n) (return n)]
-    [`(if0 ,e₀ ,e₁ ,e₂) (>>= (ev e₀ env)
-                              (λ (c) (if (zero? c) (ev e₁ env) (ev e₂ env))))]
+    [`(if0 ,e₀ ,e₁ ,e₂)
+     (>>= (ev e₀ env)
+          (λ (c) (if (zero? c) (ev e₁ env) (ev e₂ env))))]
+    [`(,(? primop? o) ,e₁ ,e₂)
+     (>>= (ev e₁ env)
+          (λ (v₁) (>>= (ev e₂ env)
+                       (λ (v₂) (return ((find-op o) v₁ v₂))))))]
     ))
+
+(define (primop? sym)
+  (member sym '(+ * / -)))
+
+(define (find-op sym)
+  (cdr (assoc sym (list (cons '+ +) (cons '* *) (cons '/ /) (cons '- -)))))
+
+;; Example: ((Y ev) '(if0 (- (+ 3 4) 7) 1 0) (fresh-env))
 
 ;; The Maybe Monad
 (struct monad/maybe () #:transparent)
