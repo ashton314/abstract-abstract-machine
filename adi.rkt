@@ -18,42 +18,40 @@
 
     ;; Conditionals
     [`(if0 ,c ,e₁ ,e₂)
-     (>>=/nondet
+     (stack
       (aev c env store timestamp)
-      (λ (branch)
-        (>>=/log
-         branch
-         (λ (maybe-val)
-           (>>=/maybe
-            maybe-val
-            (λ (val)
-              ;; At this point, we know that evaluating the
-              ;; conditional along this branch has not blown up!
-              (if (eq? val 'N)
-                  ;; Might be a zero
-                  (return/nondet
-                   (return/log
-                    (unstack (aev e₁ env store timestamp)
-                             (λ (v) (return/nondet
-                                     (return/log
-                                      (return/maybe v) 'true-branch))))
-                    'if-true-branch)
-                   (return/log
-                    (unstack (aev e₂ env store timestamp)
-                             (λ (v) (return/nondet
-                                     (return/log
-                                      (return/maybe v) 'false-branch))))
-                    'if-false-branch))
-                  ;; Might have failed
-                  (return/nondet (return/log (None) 'if-not-a-number))
-                  )
-              
-              ))))))]
-     
-     ))
+      (λ (cv)
+        (if (eq? cv 'N)
+            (flatten
+             (list (stack (aev e₁ env store timestamp)
+                          (λ (v₁) (return/nondet (return/log (Some v₁) 't-clause))))
+                   (stack (aev e₂ env store timestamp)
+                          (λ (v₂) (return/nondet (return/log (Some v₂) 'f-clause))))))
+            (return/nondet (return/log (None) 'bad-if))
+            )))]
 
-(define (unstack mmm f)
-  (>>=/nondet mmm (λ (mm) (>>=/log mm (λ (m) (>>=/maybe m f))))))
+    ))
+
+(define (stack mmm f)
+  (flatten
+   (map
+    (λ (branch)
+      ;; A branch is Log(Maybe, ())
+      (match branch
+        [(Log mv l)
+         (match mv
+           [(Some v)
+
+            (map                         ; over returned non-det
+             (λ (new-branch)
+               (match new-branch
+                 [(Log bv l₂) (Log bv (if l₂ (cons l₂ l) l))]))
+             (f v))
+
+            ]
+           [(None) branch])
+         ]))
+    mmm)))
 
 ;; (define ((ndet-ev ndet-ev) expr-set env timestamp)
 ;;   (>>=/nondet
