@@ -22,11 +22,11 @@
       (aev c env store timestamp)
       (λ (cv)
         (if (eq? cv 'N)
-            (flatten
-             (list (stack (aev e₁ env store timestamp)
-                          (λ (v₁) (return/nondet (return/log (Some v₁) 't-clause))))
-                   (stack (aev e₂ env store timestamp)
-                          (λ (v₂) (return/nondet (return/log (Some v₂) 'f-clause))))))
+            (return/nondet
+             (stack (aev e₁ env store timestamp)
+                    (λ (v₁) (return/nondet (return/log (Some v₁) 't-clause))))
+             (stack (aev e₂ env store timestamp)
+                    (λ (v₂) (return/nondet (return/log (Some v₂) 'f-clause)))))
             (return/nondet (return/log (None) 'bad-if))
             )))]
 
@@ -75,7 +75,7 @@
   (hash-set env var val))
 
 ;; Nondeterminism
-(define (return/nondet vals)
+(define (return/nondet . vals)
   (flatten vals))                       ; if given a single value, puts it into a list
 (define (>>=/nondet m f)
   (flatten (map f m)))
