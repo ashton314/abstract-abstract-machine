@@ -30,8 +30,46 @@
             (return/nondet (return/log (None) 'bad-if))
             )))]
 
+    ;; Arithmetic
+    [`(,(? safe-primop? o) ,e₁ ,e₂)
+     (stack
+      (aev e₁ env store timestamp)
+      (λ (v₁)
+        (stack
+         (aev e₂ env store timestamp)
+         (λ (v₂)
+           (return/nondet
+            (return/log
+             (if (eq? v₁ 'N)
+                 (if (eq? v₂ 'N)
+                     (Some 'N)
+                     (None))
+                 (None)) o))))))]
+    [`(,(? unsafe-primop? o) ,e₁ ,e₂)
+     (stack
+      (aev e₁ env store timestamp)
+      (λ (v₁)
+        (stack
+         (aev e₂ env store timestamp)
+         (λ (v₂)
+           (return/nondet
+            (return/log
+             (if (eq? v₁ 'N)
+                 (if (eq? v₂ 'N)
+                     (Some 'N)
+                     (None))
+                 (None)) o)
+            (return/log (None) 'divide-by-zero))))))]
+
     ))
 
+(define (safe-primop? sym)
+  (member sym '(+ * -)))
+(define (unsafe-primop? sym)
+  (member sym '(/)))
+
+
+;; This is kind of like a composition ofo the various monads that I have. It's... ugly.
 (define (stack mmm f)
   (flatten
    (map
