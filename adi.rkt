@@ -10,11 +10,11 @@
     [(? symbol? varname)
      (return/nondet
       (return/log
-       (env/lookup env varname) 'var-lookup))]
+       (env/lookup env varname) null))]
 
     ;; Numbers
     [(? number? n)
-     (return/nondet (return/log (return/maybe 'N) 'number-eval))]
+     (return/nondet (return/log (return/maybe 'N) null))]
 
     ;; Conditionals
     [`(if0 ,c ,e₁ ,e₂)
@@ -24,10 +24,10 @@
         (if (eq? cv 'N)
             (return/nondet
              (stack (aev e₁ env store timestamp)
-                    (λ (v₁) (return/nondet (return/log (Some v₁) 't-clause))))
+                    (λ (v₁) (return/nondet (return/log (Some v₁) null))))
              (stack (aev e₂ env store timestamp)
-                    (λ (v₂) (return/nondet (return/log (Some v₂) 'f-clause)))))
-            (return/nondet (return/log (None) 'bad-if))
+                    (λ (v₂) (return/nondet (return/log (Some v₂) null)))))
+            (return/nondet (return/log (None) null))
             )))]
 
     ;; Arithmetic
@@ -65,7 +65,7 @@
     [`(lam ,x ,e₀)
      (return/nondet
       (return/log
-       (return/maybe (cons `(lam ,x ,e₀) env)) 'lambda))]
+       (return/maybe (cons `(lam ,x ,e₀) env)) null))]
 
     [`(app ,e₀ ,e₁)
      (stack
