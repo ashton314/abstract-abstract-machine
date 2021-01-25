@@ -1,10 +1,40 @@
 #lang racket
 
+;; THE MIGHTY Y-COMBINATOR!!!
 (define (Y f)
   ((λ (x) (f (λ v (apply (x x) v))))
    (λ (x) (f (λ v (apply (x x) v))))))
 
+;; Caches
+(define $in (make-hash))
+(define $out (make-hash))
+
+(define (clear-caches!)
+  (set! $in (make-hash))
+  (set! $out (make-hash)))
+
+;; Caching evaluator
+(define ((aev-cache aev-cache) expr env store timestamp)
+  (displayln "entering cache routine")
+  (hash-ref
+   $out (list expr env)                 ; If the config is in $out, use it
+   (λ ()
+     (displayln "No entry in cache!")
+     ;; Otherwise, create an empty entery in $in
+     (let ([in-set-val (hash-ref $in (list expr env) (mutable-set))])
+       (hash-set! $out (list expr env) in-set-val)
+       (let ([out ((aev aev-cache) expr env store timestamp)])
+         (displayln "Got result from aev!")
+         (hash-update!
+          $out
+          (list expr env)
+          (λ (out-vals)
+            (set-add! out-vals out)))
+         out)))))
+
+;; Evaluator
 (define ((aev aev) expr env store timestamp)
+  (displayln "Entering evaluator")
   (match expr
     ;; Variable names
     [(? symbol? varname)
@@ -61,11 +91,11 @@
                  (None)) o)
             (return/log (None) 'divide-by-zero))))))]
 
-    ;; Closures
+    ;; Lambda: The Ultimate Paper Topic
     [`(lam ,x ,e₀)
      (return/nondet
       (return/log
-       (return/maybe (cons `(lam ,x ,e₀) env)) null))]
+       (return/maybe (cons `(lam ,(gensym 'λ) ,x ,e₀) env)) null))]
 
     [`(app ,e₀ ,e₁)
      (stack
@@ -75,7 +105,7 @@
          (aev e₁ env store timestamp)
          (λ (val)
            (match closure
-             [(cons `(lam ,x ,body) closure-env)
+             [(cons `(lam ,loc ,x ,body) closure-env)
               (aev body (env/ext closure-env x val) store timestamp)])))))]
 
     ))
