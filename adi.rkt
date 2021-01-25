@@ -61,6 +61,23 @@
                  (None)) o)
             (return/log (None) 'divide-by-zero))))))]
 
+    ;; Closures
+    [`(lam ,x ,e₀)
+     (return/nondet
+      (return/log
+       (return/maybe (cons `(lam ,x ,e₀) env)) 'lambda))]
+
+    [`(app ,e₀ ,e₁)
+     (stack
+      (aev e₀ env store timestamp)
+      (λ (closure)
+        (stack
+         (aev e₁ env store timestamp)
+         (λ (val)
+           (match closure
+             [(cons `(lam ,x ,body) closure-env)
+              (aev body (env/ext closure-env x val) store timestamp)])))))]
+
     ))
 
 (define (safe-primop? sym)
@@ -83,7 +100,7 @@
             (map                         ; over returned non-det
              (λ (new-branch)
                (match new-branch
-                 [(Log bv l₂) (Log bv (if l₂ (cons l₂ l) l))]))
+                 [(Log bv l₂) (Log bv (flatten (if l₂ (cons l₂ l) l)))]))
              (f v))
 
             ]
