@@ -13,28 +13,33 @@
   (set! $in (make-hash))
   (set! $out (make-hash)))
 
+(define (inspect label v)
+  (display label)
+  (displayln v)
+  v)
+
 ;; Caching evaluator
+;; Call like ((Y aev-cache) '(+ 1 2) (fresh-env) '() '())
 (define ((aev-cache aev-cache) expr env store timestamp)
-  (displayln "entering cache routine")
-  (hash-ref
-   $out (list expr env)                 ; If the config is in $out, use it
-   (λ ()
-     (displayln "No entry in cache!")
-     ;; Otherwise, create an empty entery in $in
-     (let ([in-set-val (hash-ref $in (list expr env) (mutable-set))])
-       (hash-set! $out (list expr env) in-set-val)
-       (let ([out ((aev aev-cache) expr env store timestamp)])
-         (displayln "Got result from aev!")
-         (hash-update!
-          $out
-          (list expr env)
-          (λ (out-vals)
-            (set-add! out-vals out)))
-         out)))))
+  (flatten
+   (set->list
+    (hash-ref
+     $out (list expr env)                 ; If the config is in $out, use it
+     (λ ()
+       ;; Otherwise, create an empty entery in $in
+       (let ([in-set-val (hash-ref $in (list expr env) (mutable-set))])
+         (hash-set! $out (list expr env) in-set-val)
+         (let ([out ((aev aev-cache) expr env store timestamp)])
+           (hash-update!
+            $out
+            (list expr env)
+            (λ (out-vals)
+              (set-add! out-vals out)
+              out-vals))
+           out)))))))
 
 ;; Evaluator
 (define ((aev aev) expr env store timestamp)
-  (displayln "Entering evaluator")
   (match expr
     ;; Variable names
     [(? symbol? varname)
